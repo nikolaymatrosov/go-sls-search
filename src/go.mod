@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.46
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.29.6
 	github.com/blevesearch/bleve v1.0.14
-	github.com/krolaw/zipstream v0.0.0-20180621105154-0a2661891f94
+	github.com/eikenb/pipeat v0.0.0-20210730190139-06b3e6902001
 	go.uber.org/zap v1.24.0
 )
 
@@ -51,5 +51,5 @@ require (
 	go.etcd.io/bbolt v1.3.5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	golang.org/x/sys v0.0.0-20200202164722-d101bd2416d5 // indirect
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 )

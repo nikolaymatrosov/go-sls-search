@@ -18,5 +18,8 @@
 data/anek/anek.jsonl
 data/anek/index/
 data/anek/bleve.zip
+data/films/film_approvals.json
 
 .DS_Store
+*.log
+tank/logs

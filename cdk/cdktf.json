@@ -1,0 +1,15 @@
+{
+  "language": "go",
+  "app": "go run main.go",
+  "codeMakerOutput": "generated",
+  "projectId": "129c0388-6de4-4a68-89f8-dcf45269e0fd",
+  "sendCrashReports": "false",
+  "terraformProviders": [
+    "yandex-cloud/yandex"
+  ],
+  "terraformModules": [],
+  "context": {
+    "excludeStackIdFromLogicalIds": "true",
+    "allowSepCharsInLogicalIds": "true"
+  }
+}

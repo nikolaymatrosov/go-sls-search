@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/blevesearch/bleve"
@@ -8,7 +9,7 @@ import (
 	"net/http"
 )
 
-func sendErr(rw http.ResponseWriter, l *zap.Logger, code int, err error) {
+func sendErr(_ context.Context, rw http.ResponseWriter, l *zap.Logger, code int, err error) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(code)
 	resp := make(map[string]string)
@@ -23,11 +24,21 @@ func sendErr(rw http.ResponseWriter, l *zap.Logger, code int, err error) {
 	}
 }
 
-func sendResult(rw http.ResponseWriter, l *zap.Logger, resp *bleve.SearchResult) {
+type SearchResultWithTimings struct {
+	*bleve.SearchResult
+	Durations map[string]int64 `json:"durations"`
+}
+
+func sendResult(ctx context.Context, rw http.ResponseWriter, l *zap.Logger, resp *bleve.SearchResult) {
 	rw.Header().Set("Content-Type", "application/json")
 	rw.WriteHeader(http.StatusOK)
+	durations := ctx.Value("durations").(map[string]int64)
+	withTimings := SearchResultWithTimings{
+		resp,
+		durations,
+	}
 
-	jsonResp, err := json.Marshal(resp)
+	jsonResp, err := json.Marshal(withTimings)
 	if err != nil {
 		l.Error("Error happened in JSON marshal.", zap.Error(err))
 	}
