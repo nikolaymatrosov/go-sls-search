@@ -1,0 +1,20 @@
+phantom:
+  address: functions.yandexcloud.net:443 # [Target's address]:[target's port]
+  ssl: true
+  # Use your func id
+  ammofile: ammo.txt
+  load_profile:
+    load_type: rps # schedule load by defining requests per second
+    schedule: line(1, 10, 10s) const(10, 1m)
+#  header_http: "1.1"
+#  headers:s
+#    - "[Host: functions.yandexcloud.net]"
+#    - "[User-Agent: tank]"
+#    - "[Accept: */*]"
+autostop:
+  autostop:
+    - http(4xx,25%,10)
+console:
+  enabled: true # enable console output
+telegraf:
+  enabled: false # let's disable telegraf monitoring for the first time

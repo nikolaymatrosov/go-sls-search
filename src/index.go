@@ -1,7 +1,6 @@
 package main
 
 import (
-	"archive/zip"
 	"context"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -9,17 +8,17 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/eikenb/pipeat"
+	"github.com/mholt/archiver/v4"
 	"go.uber.org/zap"
 	"io"
+	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
-	"strings"
+	"path"
 	"sync"
 	"time"
 )
 
-const headFetchTimout = 1 * time.Second
 const downloadTimeout = 5 * time.Second
 
 func fetchIndex(ctx context.Context, logger *zap.Logger) error {
@@ -39,9 +38,6 @@ func fetchIndex(ctx context.Context, logger *zap.Logger) error {
 		return aws.Endpoint{}, fmt.Errorf("unknown endpoint requested")
 	})
 
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
-	defer cancel()
-
 	// We'll get keys from env variables
 	cfg, err := config.LoadDefaultConfig(
 		ctx,
@@ -60,7 +56,7 @@ func fetchIndex(ctx context.Context, logger *zap.Logger) error {
 
 	err = downloadAndUnzip(ctx, client, logger)
 	if err != nil {
-		logger.Error("Failed to unzip index", zap.Error(err))
+		logger.Error("Failed to download and unzip index", zap.Error(err))
 		return err
 	}
 	return nil
@@ -76,11 +72,6 @@ func downloadAndUnzip(ctx context.Context, client *s3.Client, l *zap.Logger) err
 	pipeReaderAt, pipeWriterAt, err := pipeat.Pipe()
 	if err != nil {
 		l.Error("pipeAt error", zap.Error(err))
-	}
-
-	info, err := getObjectInfo(ctx, client)
-	if err != nil {
-		return err
 	}
 
 	errorChannel := make(chan error)
@@ -106,53 +97,50 @@ func downloadAndUnzip(ctx context.Context, client *s3.Client, l *zap.Logger) err
 		}
 	}()
 	go func() {
-		archive, err := zip.NewReader(pipeReaderAt, info.ContentLength)
-		if err != nil {
-			log.Fatal(err)
-		}
 		const root = "/tmp"
-		for _, f := range archive.File {
-			if err != nil {
-				if err != io.EOF {
-					l.Fatal("failed to unzip", zap.Error(err))
-					errorChannel <- err
-				}
-				break
-			}
-			filePath := filepath.Join(root, f.Name)
-			l.Debug(fmt.Sprintf("unzipping file %s", filePath),
-				zap.String("filePath", filePath),
-			)
+		format, input, err := archiver.Identify(key, pipeReaderAt)
+		if err != nil {
+			l.Error("unsupported archive type for file",
+				zap.String("source", key),
+				zap.Error(err))
+			errorChannel <- err
+		}
 
-			if !strings.HasPrefix(filePath, filepath.Clean(root)+string(os.PathSeparator)) {
-				errorChannel <- fmt.Errorf("invalid file path")
-			}
-			if f.FileInfo().IsDir() {
-				l.Debug("creating directory", zap.String("filePath", filePath))
-				err := os.MkdirAll(filePath, os.ModePerm)
+		if ex, ok := format.(archiver.Extractor); ok {
+			err := ex.Extract(context.Background(), input, nil, func(ctx context.Context, f archiver.File) error {
+				if f.IsDir() {
+					return nil
+				}
+
+				outputPath := path.Join(root, f.NameInArchive)
+
+				// create symlinks
+				if f.LinkTarget != "" {
+					err := os.Symlink(f.LinkTarget, outputPath)
+					if err != nil {
+						return err
+					}
+					return nil
+				}
+
+				reader, err := f.Open()
 				if err != nil {
-					errorChannel <- err
+					return err
 				}
-				continue
-			}
+				defer reader.Close()
 
-			if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
-				errorChannel <- err
-			}
+				writer, err := safeCreateFile(outputPath, f.Mode())
+				if err != nil {
+					return fmt.Errorf("failed to create %v: %v", outputPath, err)
+				}
+				defer writer.Close()
 
-			dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
-			if err != nil {
-				errorChannel <- err
-			}
-			reader, err := f.Open()
-			if err != nil {
-				errorChannel <- err
-			}
-			if _, err := io.Copy(dstFile, reader); err != nil {
-				errorChannel <- err
-			}
-			_ = reader.Close()
-			err = dstFile.Close()
+				if _, err := io.Copy(writer, reader); err != nil {
+					return fmt.Errorf("failed to write %v: %v", outputPath, err)
+				}
+
+				return nil
+			})
 			if err != nil {
 				errorChannel <- err
 			}
@@ -175,25 +163,6 @@ func downloadAndUnzip(ctx context.Context, client *s3.Client, l *zap.Logger) err
 	return nil
 }
 
-func getObjectInfo(ctx context.Context, client *s3.Client) (*s3.HeadObjectOutput, error) {
-	durations := ctx.Value("durations").(map[string]int64)
-	start := time.Now()
-	defer func() {
-		durations["getObjectInfo"] = time.Now().Sub(start).Microseconds()
-	}()
-	headCtx, cancel := context.WithTimeout(ctx, headFetchTimout)
-	defer cancel()
-
-	info, err := client.HeadObject(headCtx, &s3.HeadObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return info, nil
-}
-
 func checkCache(ctx context.Context) error {
 	durations := ctx.Value("durations").(map[string]int64)
 	start := time.Now()
@@ -208,4 +177,12 @@ func checkCache(ctx context.Context) error {
 		return fmt.Errorf("index is not dir")
 	}
 	return nil
+}
+
+func safeCreateFile(filePath string, mode fs.FileMode) (*os.File, error) {
+	if err := os.MkdirAll(path.Dir(filePath), 0755); err != nil {
+		return nil, fmt.Errorf("failed to create directory %v: %v", path.Dir(filePath), err)
+	}
+
+	return os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
 }

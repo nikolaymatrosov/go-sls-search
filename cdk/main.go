@@ -74,7 +74,7 @@ func NewMyStack(scope constructs.Construct, id string) cdktf.TerraformStack {
 			Description:      j.String("Key for uploading index to go-sls-search func"),
 		})
 
-	index := storageobject.NewStorageObject(
+	storageobject.NewStorageObject(
 		stack,
 		j.String("serialized-index-archive"),
 		&storageobject.StorageObjectConfig{
@@ -100,8 +100,26 @@ func NewMyStack(scope constructs.Construct, id string) cdktf.TerraformStack {
 			"AWS_ACCESS_KEY_ID":     staticAccessKey.AccessKey(),
 			"AWS_SECRET_ACCESS_KEY": staticAccessKey.SecretKey(),
 		},
-		DependsOn: &[]cdktf.ITerraformDependable{index},
+		Tags: j.Strings("zst"),
+		//DependsOn: &[]cdktf.ITerraformDependable{index},
 	})
+
+	//functionresource.NewFunctionResource(stack, j.String("downloader"), &functionresource.FunctionResourceConfig{
+	//	Content: &functionresource.FunctionResourceContent{
+	//		ZipFilename: asset.Path(),
+	//	},
+	//	Entrypoint:       j.String("speed.SpeedHandler"),
+	//	ExecutionTimeout: j.String("5"),
+	//	Memory:           j.Number(128),
+	//	Name:             j.String("downloader"),
+	//	Runtime:          j.String("golang119"),
+	//	UserHash:         asset.AssetHash(),
+	//	Environment: &map[string]*string{
+	//		"AWS_ACCESS_KEY_ID":     staticAccessKey.AccessKey(),
+	//		"AWS_SECRET_ACCESS_KEY": staticAccessKey.SecretKey(),
+	//	},
+	//	//DependsOn: &[]cdktf.ITerraformDependable{index},
+	//})
 
 	return stack
 }

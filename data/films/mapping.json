@@ -1,0 +1,94 @@
+{
+  "types": {
+    "films": {
+      "fields": [
+        {
+          "name": "filmname",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "foreignName",
+          "type": "text",
+          "analyzer": "en",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "studio",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true,
+          "includeTermVectors": false
+        },
+        {
+          "name": "crYearOfProduction",
+          "type": "number",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "ageLimit",
+          "type": "number",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "director",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "scriptAuthor",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "composer",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "producer",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "annotation",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "countryOfProduction",
+          "type": "text",
+          "analyzer": "keyword",
+          "store": true,
+          "index": true
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true
+        }
+      ]
+    }
+  },
+  "type_field": "_type",
+  "default_type": "film",
+  "default_field": "filmname"
+}

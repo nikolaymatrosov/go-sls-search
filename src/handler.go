@@ -5,15 +5,36 @@ import (
 	"errors"
 	"fmt"
 	"github.com/blevesearch/bleve"
+	_ "github.com/blevesearch/bleve/analysis/analyzer/keyword"
+	_ "github.com/blevesearch/bleve/analysis/lang/ru"
 	"go.uber.org/zap"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
 const indexPath = "/tmp/index"
 const bucket = "sls-search"
-const key = "bleve.zip"
+const key = "film/index.tar.zst"
+
+var fields = []string{
+	"foreignName",
+	"filmname",
+	"studio",
+	"crYearOfProduction",
+	"director",
+	"scriptAuthor",
+	"composer",
+	"cameraman",
+	"producer",
+	"duration",
+	"color",
+	"annotation",
+	"countryOfProduction",
+	"category",
+	"ageLimit",
+}
 
 //goland:noinspection GoUnusedExportedFunction
 func SearchHandler(rw http.ResponseWriter, req *http.Request) {
@@ -52,7 +73,25 @@ func SearchHandler(rw http.ResponseWriter, req *http.Request) {
 	start = time.Now()
 	query := bleve.NewQueryStringQuery(term)
 	searchRequest := bleve.NewSearchRequest(query)
-	searchRequest.Fields = []string{"joke"}
+	searchRequest.Fields = fields
+
+	yearFacet := &bleve.FacetRequest{
+		Size:  20,
+		Field: "crYearOfProduction",
+	}
+	for i := 2000; i < 2020; i++ {
+		minY := float64(i)
+		maxY := float64(i + 1)
+		yearFacet.AddNumericRange(strconv.Itoa(i), &minY, &maxY)
+	}
+
+	searchRequest.Facets = bleve.FacetsRequest{
+		"year": yearFacet,
+		"country": &bleve.FacetRequest{
+			Size:  5,
+			Field: "countryOfProduction",
+		},
+	}
 	searchResult, err := index.Search(searchRequest)
 	if err != nil {
 		sendErr(ctx, rw, logger, 500, err)

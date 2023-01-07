@@ -1,24 +1,20 @@
 {
   "types": {
-    "jokes": {
-      "properties": {
-        "joke": {
-          "fields": [
-            {
-              "name": "joke",
-              "type": "text",
-              "analyzer": "standard",
-              "store": true,
-              "index": true,
-              "include_term_vectors": true,
-              "include_in_all": true,
-              "docvalues": true
-            }
-          ]
+    "joke": {
+      "fields": [
+        {
+          "name": "joke",
+          "type": "text",
+          "analyzer": "ru",
+          "store": true,
+          "index": true,
+          "include_term_vectors": true,
+          "include_in_all": true,
+          "docvalues": true
         }
-      }
+      ]
     }
   },
   "type_field": "_type",
-  "default_type": "_default"
+  "default_type": "film"
 }

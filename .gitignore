@@ -19,7 +19,12 @@ data/anek/anek.jsonl
 data/anek/index/
 data/anek/bleve.zip
 data/films/film_approvals.json
+data/films/index
+
 
 .DS_Store
 *.log
-tank/logs
+tank/*/logs
+tank/*/ammo.txt
+
+venv
