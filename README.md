@@ -1,3 +1,3 @@
 Пример кода из поста про полнотекстовый serverless на go.
 
-https://medium.com/@nikolaymatrosov/serverless-full-text-search-на-go-ebc2c529cd56
+https://nikolaymatrosov.ru/2023-01-07-Serverless-Full-Text-Search-on-Go
